@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { h, ref } from 'vue'
+import { h, ref, reactive  } from 'vue'
 import { invoke } from "@tauri-apps/api/tauri";
 import {
     NButton,
@@ -16,8 +16,10 @@ import {
     FormRules
 } from 'naive-ui';
 
+// 配置项表单
 const formRef = ref<FormInst | null>(null)
 
+// 表格配置
 const columns = [
     {
         title: '本地地址',
@@ -44,7 +46,7 @@ const columns = [
     {
         title: '本地端口',
         key: 'local_port',
-        // resizable: true,
+        
         align: 'center',
         width: 60,
         render(row) {
@@ -67,7 +69,7 @@ const columns = [
     {
         title: '远程地址',
         key: 'remote_host',
-        // resizable: true,
+        
         width: 200,
         ellipsis: true,
         render(row) {
@@ -89,7 +91,7 @@ const columns = [
     {
         title: '远程端口',
         key: 'remote_port',
-        // resizable: true,
+        
         align: 'center',
         width: 60,
         render(row) {
@@ -111,7 +113,7 @@ const columns = [
     },
     {
         title: '操作',
-        key: 'action',
+        key: 'status',
         width: 100,
         align: 'center',
         render(row) {
@@ -156,30 +158,32 @@ const columns = [
     }
 ];
 
-const data = [
+// 配置列表
+const configs = reactive([
     {
         local_host: '127.0.0.1',
         local_port: '80800',
         remote_host: '2132:0568:0123:1223:0DA8:0D45:0000:52D3',
         remote_port: '8080',
-        action: '删除'
+        status: '删除'
     },
     {
         local_host: '2132:0568:0123:1223:0DA8:0D45:0000:52D3',
         local_port: '8080',
         remote_host: '0.0.0.0',
         remote_port: '8080',
-        action: '删除'
+        status: '删除'
     },
     {
         local_host: '[::]',
         local_port: '8080',
         remote_host: '0.0.0.0',
         remote_port: '8080',
-        action: '删除'
+        status: '删除'
     },
-];
+]);
 
+// 页码控件
 const pagination = {
     pageSize: 2,
 };
@@ -192,7 +196,8 @@ const segmented = {
     footer: 'soft'
 };
 
-const configData = ref({
+// 配置项
+const configItem = ref({
     local_host: '0.0.0.0',
     local_port: '80800',
     remote_host: '2132:0568:0123:1223:0DA8:0D45:0000:52D3',
@@ -200,13 +205,16 @@ const configData = ref({
     protocol: ['udp', 'tcp']
 });
 
-async function pushConfig() {
-    console.log(configData.value);
-    const newConfig = await invoke("add_config", { data: JSON.stringify(configData.value) });
-    configData.value = JSON.parse(newConfig);
-    console.log(configData.value);
+// 添加配置
+async function addConfig() {
+    console.log(configItem.value);
+    const newConfig = await invoke("add_config", { data: JSON.stringify(configItem.value) });
+    configItem.value = JSON.parse(newConfig);
+    configs.push(configItem.value);
+    console.log(configItem.value);
 }
 
+// 添加配置窗口
 const showModal = ref(false);
 
 // 表单验证规则
@@ -244,7 +252,7 @@ const handleValidateButtonClick = (e: MouseEvent) => {
     e.preventDefault()
     formRef.value?.validate((errors) => {
         if (!errors) {
-            pushConfig();
+            addConfig();
             window.$message.success('验证成功')
         } else {
             console.log(errors)
@@ -258,7 +266,7 @@ const handleValidateButtonClick = (e: MouseEvent) => {
 
 <template>
     <div class="container">
-        <n-data-table style="height:100%;" size="small" :columns="columns" :data="data" :pagination="pagination"
+        <n-data-table style="height:100%;" size="small" :columns="columns" :data="configs" :pagination="pagination"
             :bordered="false" :single-line="false" />
         <n-button class="add-btn" type="info" size="large" @click="showModal = true">添加</n-button>
     </div>
@@ -268,21 +276,21 @@ const handleValidateButtonClick = (e: MouseEvent) => {
         :bordered="false" :segmented="segmented" footer-style="display: flex;flex-direction: row-reverse;">
         <template #header-extra>
         </template>
-        <n-form ref="formRef" :model="configData" :rules="rules">
+        <n-form ref="formRef" :model="configItem" :rules="rules">
             <n-form-item path="local_host" label="本地地址（IP、域名）">
-                <n-input v-model:value="configData.local_host" @keydown.enter.prevent />
+                <n-input v-model:value="configItem.local_host" @keydown.enter.prevent />
             </n-form-item>
             <n-form-item path="local_port" label="本地端口">
-                <n-input v-model:value="configData.local_port" @keydown.enter.prevent />
+                <n-input v-model:value="configItem.local_port" @keydown.enter.prevent />
             </n-form-item>
             <n-form-item path="remote_host" label="远程地址（IP、域名）">
-                <n-input v-model:value="configData.remote_host" @keydown.enter.prevent />
+                <n-input v-model:value="configItem.remote_host" @keydown.enter.prevent />
             </n-form-item>
             <n-form-item path="remote_port" label="远程端口">
-                <n-input v-model:value="configData.remote_port" @keydown.enter.prevent />
+                <n-input v-model:value="configItem.remote_port" @keydown.enter.prevent />
             </n-form-item>
             <n-form-item label="转发协议" path="protocol">
-                <n-checkbox-group v-model:value="configData.protocol">
+                <n-checkbox-group v-model:value="configItem.protocol">
                     <n-space>
                         <n-checkbox value="tcp">
                             TCP

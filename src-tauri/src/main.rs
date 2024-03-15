@@ -16,7 +16,7 @@ pub struct Config {
     pub local_port: String,
     pub remote_host: String,
     pub remote_port: String,
-    pub protocol: (String, String)
+    pub protocol: Vec<String>
 }
 
 #[tauri::command]
