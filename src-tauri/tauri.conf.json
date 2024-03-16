@@ -20,7 +20,7 @@
     "windows": [
       {
         "title": "realm-ui",
-        "width": 900,
+        "width": 1024,
         "height": 600
       }
     ],

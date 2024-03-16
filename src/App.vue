@@ -8,8 +8,8 @@
 </template>
 
 <script setup lang="ts">
-import MessageApi from './components/message-api.vue';
-import Content from './components/Content.vue';
+import MessageApi from '@/components/MessageApi';
+import Content from '@/components/Content';
 import {
     NMessageProvider,
     NConfigProvider

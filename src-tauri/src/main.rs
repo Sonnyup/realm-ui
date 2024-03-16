@@ -20,7 +20,7 @@ pub struct Config {
 }
 
 #[tauri::command]
-fn add_config(data: &str) ->  String {
+fn insert_record(data: &str) ->  String {
     println!("data: {}", data);
     let config:Config = serde_json::from_str(&data).unwrap();
     let json_str = serde_json::to_string(&config).unwrap();
@@ -31,7 +31,7 @@ fn main() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             greet,
-            add_config,
+            insert_record,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
