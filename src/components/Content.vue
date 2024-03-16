@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { h, ref, reactive  } from 'vue'
+import { h, ref, reactive } from 'vue'
 import { invoke } from "@tauri-apps/api/tauri";
 import { Record } from "@/modules/Record";
 import {
@@ -10,6 +10,7 @@ import {
     NModal,
     NForm,
     NInput,
+    NInputNumber,
     NFormItem,
     NCheckbox,
     NCheckboxGroup,
@@ -47,7 +48,7 @@ const columns = [
     {
         title: '本地端口',
         key: 'local_port',
-        
+
         align: 'center',
         width: 60,
         render(row) {
@@ -70,7 +71,7 @@ const columns = [
     {
         title: '远程地址',
         key: 'remote_host',
-        
+
         width: 200,
         ellipsis: true,
         render(row) {
@@ -92,7 +93,7 @@ const columns = [
     {
         title: '远程端口',
         key: 'remote_port',
-        
+
         align: 'center',
         width: 60,
         render(row) {
@@ -115,7 +116,7 @@ const columns = [
     {
         title: '转发协议',
         key: 'protocol',
-        
+
         align: 'center',
         width: 80,
         render(row) {
@@ -198,51 +199,42 @@ const segmented = {
     footer: 'soft'
 };
 
-// 配置项
-const record = reactive<Record>({
-    local_host: '0.0.0.0',
-    local_port: '8081',
-    remote_host: '2132:0568:0123:1223:0DA8:0D45:0000:52D3',
-    remote_port: '8080',
-    protocol: ['udp', 'tcp']
-});
-
-// 新增配置
-async function insertRecord() {
-    console.log(record);
-    const newConfig = await invoke("insert_record", { data: JSON.stringify(record) });
-    record.value = JSON.parse(newConfig);
-    records.push(record.value);
-    console.log(record.value);
+// 数据
+type RecordData = {
+    item: Record,
+    list: Record[];
 }
 
 // 配置列表
-const records = reactive<Record>([
-    {
+const recordData = reactive<RecordData>({
+    item: {
         local_host: '127.0.0.1',
-        local_port: '80800',
-        remote_host: '2132:0568:0123:1223:0DA8:0D45:0000:52D3',
-        remote_port: '8080',
+        local_port: 1080,
+        remote_host: '127.0.0.1',
+        remote_port: 80,
         protocol: ['tcp', 'udp'],
-        status: 1
+        status: false
     },
-    {
-        local_host: '2132:0568:0123:1223:0DA8:0D45:0000:52D3',
-        local_port: '8080',
-        remote_host: '0.0.0.0',
-        remote_port: '8080',
-        protocol: ['tcp', 'udp'],
-        status: 2
-    },
-    {
-        local_host: '[::]',
-        local_port: '8080',
-        remote_host: '0.0.0.0',
-        remote_port: '8080',
-        protocol: ['tcp', 'udp'],
-        status: 0
-    },
-]);
+    list: []
+});
+
+// 获取配置列表
+function getRecords() {
+    invoke("get_records").then((data) => {
+        recordData.list = JSON.parse(data);
+        console.log(recordData.list);
+    });
+}
+getRecords();
+
+// 新增配置
+async function insertRecord() {
+    console.log(recordData.item);
+    const newRecord = await invoke("insert_record", { data: JSON.stringify(recordData.item) });
+    recordData.item = JSON.parse(newRecord);
+    recordData.list.push(recordData.item);
+    console.log(recordData.item);
+}
 
 // 添加配置窗口
 const showModal = ref(false);
@@ -255,6 +247,7 @@ const rules: FormRules = {
         trigger: 'blur'
     },
     local_port: {
+        type: 'number',
         required: true,
         message: '请输入本地端口',
         trigger: 'blur'
@@ -265,6 +258,7 @@ const rules: FormRules = {
         trigger: 'blur'
     },
     remote_port: {
+        type: 'number',
         required: true,
         message: '请输入远程端口',
         trigger: 'blur'
@@ -285,6 +279,8 @@ const handleValidateButtonClick = (e: MouseEvent) => {
             insertRecord();
             window.$message.success('验证成功')
         } else {
+            
+            console.log(recordData.item)
             console.log(errors)
             window.$message.error('验证失败')
         }
@@ -296,8 +292,8 @@ const handleValidateButtonClick = (e: MouseEvent) => {
 
 <template>
     <div class="container">
-        <n-data-table style="height:100%;" size="small" :columns="columns" :data="records" :pagination="pagination"
-            :bordered="false" :single-line="false" />
+        <n-data-table style="height:100%;" size="small" :columns="columns" :data="recordData.list"
+            :pagination="pagination" :bordered="false" :single-line="false" />
         <n-button class="add-btn" type="info" size="large" @click="showModal = true">添加</n-button>
     </div>
 
@@ -306,21 +302,21 @@ const handleValidateButtonClick = (e: MouseEvent) => {
         :bordered="false" :segmented="segmented" footer-style="display: flex;flex-direction: row-reverse;">
         <template #header-extra>
         </template>
-        <n-form ref="formRef" :model="record" :rules="rules">
+        <n-form ref="formRef" :model="recordData.item" :rules="rules">
             <n-form-item path="local_host" label="本地地址（IP、域名）">
-                <n-input v-model:value="record.local_host" @keydown.enter.prevent />
+                <n-input v-model:value="recordData.item.local_host" @keydown.enter.prevent />
             </n-form-item>
             <n-form-item path="local_port" label="本地端口">
-                <n-input v-model:value="record.local_port" @keydown.enter.prevent />
+                <n-input-number v-model:value="recordData.item.local_port" @keydown.enter.prevent />
             </n-form-item>
             <n-form-item path="remote_host" label="远程地址（IP、域名）">
-                <n-input v-model:value="record.remote_host" @keydown.enter.prevent />
+                <n-input v-model:value="recordData.item.remote_host" @keydown.enter.prevent />
             </n-form-item>
             <n-form-item path="remote_port" label="远程端口">
-                <n-input v-model:value="record.remote_port" @keydown.enter.prevent />
+                <n-input-number v-model:value="recordData.item.remote_port" @keydown.enter.prevent />
             </n-form-item>
             <n-form-item label="转发协议" path="protocol">
-                <n-checkbox-group v-model:value="record.protocol">
+                <n-checkbox-group v-model:value="recordData.item.protocol">
                     <n-space>
                         <n-checkbox value="tcp">
                             TCP
