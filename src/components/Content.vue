@@ -15,8 +15,12 @@ import {
     NCheckbox,
     NCheckboxGroup,
     NSpace,
-    FormRules
+    FormRules,
+    FormInst,
+    useMessage
 } from 'naive-ui';
+
+const message = useMessage();
 
 // 配置项表单
 const formRef = ref<FormInst | null>(null)
@@ -29,7 +33,7 @@ const columns = [
         width: 200,
         // resizable: true,
         ellipsis: true,
-        render(row) {
+        render(row: Record) {
             return h(
                 NGradientText,
                 {
@@ -51,7 +55,7 @@ const columns = [
 
         align: 'center',
         width: 60,
-        render(row) {
+        render(row: Record) {
             return h(
                 NTag,
                 {
@@ -74,7 +78,7 @@ const columns = [
 
         width: 200,
         ellipsis: true,
-        render(row) {
+        render(row: Record) {
             return h(
                 NGradientText,
                 {
@@ -96,7 +100,7 @@ const columns = [
 
         align: 'center',
         width: 60,
-        render(row) {
+        render(row: Record) {
             return h(
                 NTag,
                 {
@@ -119,7 +123,7 @@ const columns = [
 
         align: 'center',
         width: 80,
-        render(row) {
+        render(row: Record) {
             const tags = row.protocol.map((tagKey) => {
                 return h(
                     NTag,
@@ -144,7 +148,8 @@ const columns = [
         key: 'status',
         width: 100,
         align: 'center',
-        render(row) {
+        render(row: Record) {
+            console.log(row)
             return [
                 h(
                     NButton,
@@ -153,7 +158,7 @@ const columns = [
                         // tertiary: true,
                         type: "primary",
                         size: "small",
-                        onClick: () => play(row)
+                        onClick: () => { }
                     },
                     { default: () => "开启" }
                 ),
@@ -177,7 +182,7 @@ const columns = [
                         style: {
                             marginLeft: '8px'
                         },
-                        onClick: () => play(row)
+                        onClick: () => { }
                     },
                     { default: () => "删除" }
                 )
@@ -221,19 +226,30 @@ const recordData = reactive<RecordData>({
 // 获取配置列表
 function getRecords() {
     invoke("get_records").then((data) => {
-        recordData.list = JSON.parse(data);
-        console.log(recordData.list);
+        if (typeof data === 'string') {
+            recordData.list = JSON.parse(data);
+            console.log(recordData.list);
+        } else {
+            console.error('Data is not a string:', data);
+            // 处理错误情况  
+        }
     });
 }
 getRecords();
 
 // 新增配置
-async function insertRecord() {
+function insertRecord() {
     console.log(recordData.item);
-    const newRecord = await invoke("insert_record", { data: JSON.stringify(recordData.item) });
-    recordData.item = JSON.parse(newRecord);
-    recordData.list.push(recordData.item);
-    console.log(recordData.item);
+    invoke("insert_record", { data: JSON.stringify(recordData.item) }).then((newRecord) => {
+        if (typeof newRecord === 'string') {
+            recordData.item = JSON.parse(newRecord);
+            recordData.list.push(recordData.item);
+            console.log(recordData.item);
+        } else {
+            console.error('Data is not a string:', newRecord);
+            // 处理错误情况  
+        }
+    });
 }
 
 // 添加配置窗口
@@ -277,12 +293,12 @@ const handleValidateButtonClick = (e: MouseEvent) => {
     formRef.value?.validate((errors) => {
         if (!errors) {
             insertRecord();
-            window.$message.success('验证成功')
+            message.success('验证成功')
         } else {
-            
+
             console.log(recordData.item)
             console.log(errors)
-            window.$message.error('验证失败')
+            message.error('验证失败')
         }
     })
 };
