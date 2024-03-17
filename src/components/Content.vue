@@ -233,6 +233,9 @@ function getRecords() {
             console.error('Data is not a string:', data);
             // 处理错误情况  
         }
+    })
+    .catch((err) => {
+        console.error(err);
     });
 }
 getRecords();
@@ -240,13 +243,12 @@ getRecords();
 // 新增配置
 function insertRecord() {
     console.log(recordData.item);
-    invoke("insert_record", { data: JSON.stringify(recordData.item) }).then((newRecord) => {
-        if (typeof newRecord === 'string') {
-            recordData.item = JSON.parse(newRecord);
-            recordData.list.push(recordData.item);
+    invoke("insert_record", { data: JSON.stringify(recordData.item) }).then((records) => {
+        if (typeof records === 'string') {
+            recordData.list = JSON.parse(records);
             console.log(recordData.item);
         } else {
-            console.error('Data is not a string:', newRecord);
+            console.error('Data is not a string:', records);
             // 处理错误情况  
         }
     });
