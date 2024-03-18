@@ -4,11 +4,10 @@ use record::Record;
 use serde_json::{from_str, to_string, to_writer_pretty};
 use std::fs::{File, OpenOptions};
 use std::io::Read;
+use std::os::windows::io::AsHandle;
 use std::os::windows::process::CommandExt;
 use std::process::Command;
-use std::sync::mpsc;
-use std::thread;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::thread::{self, sleep};
 use std::time::Duration;
 
 #[tauri::command]
@@ -121,24 +120,34 @@ pub fn open_port(data: &str) -> Result<bool, String> {
         NUM += 1;
         println!("num: {}", &NUM);
     }
-    let (sender, receiver) = mpsc::channel();
-    let handle = thread::spawn(move || {
-        let mut command = Command::new("realm");
-        command
-            .creation_flags(0x08000000) // 隐藏CMD窗口
-            .args(["-l", &local_host_port])
-            .args(["-r", &remote_host_port]);
 
-        let result = command.output();
-        println!("1");
-        println!("{:#?}", result);
-        sender.send(result).unwrap()
+    let mut command = Command::new("realm");
+    let status = command
+        .creation_flags(0x08000000) // 隐藏CMD窗口
+        .args(["-l", &local_host_port])
+        .args(["-r", &remote_host_port]);
+
+    println!("{:#?}", &status);
+    let result = command.spawn();
+    println!("{:#?}", &result);
+    if result.is_err() {
+        return Err("realm start failed".to_string());
+    }
+    let mut child = result.unwrap();
+    println!("child: {:#?}", &child.as_handle());
+
+    let t = thread::spawn(move || {
+        let output = child.wait();
+        println!("output: {:#?}", &output);
     });
-    println!("{:#?}", handle);
 
-    let result = receiver.recv().unwrap();
-    println!("receive {:#?}", result);
-    // handle.join().unwrap();
+    // let ch = &child.wait_with_output();
+    // println!("child: {:#?}", &ch);
+    // sleep(Duration::from_secs(5));
 
+    // let cresult = child.kill();
+    // println!("cresult: {:#?}", &cresult);
+
+    println!("1");
     Ok(true)
 }
