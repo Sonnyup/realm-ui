@@ -272,11 +272,13 @@ async function saveRecord() {
     });
 }
 
+// 打开端口转发
 function openPort(index: number) {
     console.log('open port');
     const item = recordData.list[index];
     invoke("open_port", { data: JSON.stringify(item) }).then((status) => {
         if (status) {
+            recordData.list[index].status = true;
             message.success('开启成功');
         } else {
             message.error('开启失败');
@@ -289,9 +291,18 @@ function openPort(index: number) {
 }
 
 function closePort(index: number) {
-    recordData.list[index].status = false;
-
-    message.success('关闭成功');
+    // recordData.list[index].status = false;
+    invoke("close_port", { data: "1" }).then((status) => {
+        if (status) {
+            recordData.list[index].status = false;
+            message.success('关闭成功');
+        } else {
+            message.error('关闭失败');
+        }
+    })
+    .catch((err) => {
+        console.error(err);
+    });
 }
 
 // 添加配置窗口

@@ -1,12 +1,15 @@
 pub mod record;
 
 use record::Record;
+use serde::de::value::Error;
 use serde_json::{from_str, to_string, to_writer_pretty};
+use std::collections::HashMap;
 use std::fs::{File, OpenOptions};
 use std::io::Read;
 use std::os::windows::io::AsHandle;
 use std::os::windows::process::CommandExt;
-use std::process::Command;
+use std::process::{Child, Command};
+use std::sync::{Mutex, MutexGuard};
 use std::thread::{self, sleep};
 use std::time::Duration;
 
@@ -106,7 +109,14 @@ fn get_file_handle() -> Result<File, Box<dyn std::error::Error>> {
 
     Ok(file)
 }
-static mut NUM: i32 = 1;
+
+#[derive(Debug)]
+struct Childs {
+    pid: u32,
+    child: Child,
+}
+
+static mut childs: Vec<Childs> = Vec::new();
 
 #[tauri::command]
 pub fn open_port(data: &str) -> Result<bool, String> {
@@ -116,38 +126,53 @@ pub fn open_port(data: &str) -> Result<bool, String> {
     let remote_host_port = format!("{}:{}", record.remote_host, record.remote_port);
 
     println!("open port: {} {}", local_host_port, remote_host_port);
-    unsafe {
-        NUM += 1;
-        println!("num: {}", &NUM);
-    }
 
     let mut command = Command::new("realm");
     let status = command
         .creation_flags(0x08000000) // 隐藏CMD窗口
         .args(["-l", &local_host_port])
         .args(["-r", &remote_host_port]);
-
+        
     println!("{:#?}", &status);
-    let result = command.spawn();
-    println!("{:#?}", &result);
-    if result.is_err() {
-        return Err("realm start failed".to_string());
+    let mut child = command.spawn().map_err(|err| err.to_string())?;
+    println!("{:#?}", &child.id());
+    
+    // 等待进程结果
+    sleep(Duration::from_secs(1));
+    match child.try_wait() {
+        Ok(Some(status)) => return Ok(false),
+        Ok(None) => {
+            println!("进程启动中");
+        }
+        Err(e) => println!("error attempting to wait: {e}"),
     }
-    let mut child = result.unwrap();
-    println!("child: {:#?}", &child.as_handle());
+    
+    println!("child: {:#?}", &child);
+ 
+    unsafe {
+        childs.push(
+            Childs {
+                pid: child.id(),
+                child: child,
+            }
+        );
+    }
+    
 
-    let t = thread::spawn(move || {
-        let output = child.wait();
-        println!("output: {:#?}", &output);
-    });
-
-    // let ch = &child.wait_with_output();
-    // println!("child: {:#?}", &ch);
-    // sleep(Duration::from_secs(5));
-
-    // let cresult = child.kill();
-    // println!("cresult: {:#?}", &cresult);
-
-    println!("1");
     Ok(true)
+}
+
+#[tauri::command]
+pub fn close_port() -> Result<bool, String> {
+    // 安全地从HashMap中获取并删除Child  
+    unsafe {
+        
+        if let Some(mut child) = childs.pop(){
+            println!("child: {:#?}", &child);
+            let _ = child.child.kill();
+        }
+
+        Ok(true)
+    }
+    
 }

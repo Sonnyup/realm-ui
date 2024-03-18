@@ -19,6 +19,7 @@ fn main() {
             record::get_records,
             record::save_record,
             record::open_port,
+            record::close_port,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
