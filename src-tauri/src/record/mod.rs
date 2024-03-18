@@ -1,7 +1,7 @@
 pub mod record;
 
 use record::Record;
-use serde_json::{from_reader, from_str, to_string, to_writer_pretty};
+use serde_json::{from_str, to_string, to_writer_pretty};
 use std::fs::{File, OpenOptions};
 use std::io::Read;
 
@@ -26,7 +26,7 @@ pub fn insert_record(data: &str) -> Result<String, String> {
     let record: Record = from_str(&data).map_err(|err| err.to_string())?;
     records.push(record);
 
-    let mut file = File::options()
+    let file = File::options()
         .write(true)
         .truncate(true)
         .open("records.json")
@@ -60,17 +60,35 @@ pub fn get_records() -> Result<String, String> {
         return Ok(String::from("[]"));
     }
 
-    // let records: Vec<Record> = from_reader(&file).map_err(|err| {
-    //     eprintln!("Error getting file from_reader: {}", err);
-    //     err.to_string()
-    // })?;
-
     let records: Vec<Record> = from_str(&contents).map_err(|err| err.to_string())?;
 
     let json_str = to_string(&records).unwrap();
     Ok(json_str)
 }
 
+// 保存配置
+#[tauri::command]
+pub fn save_record(data: &str) -> Result<String, String> {
+    println!("data: {}", data);
+
+    let records: Vec<Record> = from_str(&data).map_err(|err| err.to_string())?;
+
+    let file = File::options()
+        .write(true)
+        .truncate(true)
+        .open("records.json")
+        .map_err(|err| {
+            eprintln!("Error getting file handle: {}", err);
+            err.to_string()
+        })?;
+    to_writer_pretty(file, &records).map_err(|err| err.to_string())?;
+
+    let json_str = to_string(&records).map_err(|err| err.to_string())?;
+
+    Ok(json_str)
+}
+
+// 读取文件
 fn get_file_handle() -> Result<File, Box<dyn std::error::Error>> {
     let filename = "records.json";
 
@@ -82,27 +100,4 @@ fn get_file_handle() -> Result<File, Box<dyn std::error::Error>> {
         .open(filename)?;
 
     Ok(file)
-
-    // 重新打开文件以获取新的句柄，因为之前的句柄可能处于不可预测的状态
-    // let mut binding = OpenOptions::new();
-    // let new_options = binding.read(true).write(true);
-    // let new_file = new_options.open(filename)?;
-
-    // Ok(new_file)
-    // let file = if Path::new(filename).exists() {
-    //     // 如果文件存在，直接打开它
-    //     File::open(filename).map_err(|err| err.to_string())
-    // } else {
-    //     // 如果文件不存在，尝试创建它并打开
-    //     let mut file = OpenOptions::new()
-    //         .write(true)
-    //         .create(true)
-    //         .open(filename)
-    //         .map_err(|err| err.to_string());
-
-    //     file.write_all(b"[]");
-    //     file
-    // };
-
-    // file
 }

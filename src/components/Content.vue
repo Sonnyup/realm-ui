@@ -148,8 +148,7 @@ const columns = [
         key: 'status',
         width: 100,
         align: 'center',
-        render(row: Record) {
-            console.log(row)
+        render(row: Record, rowIndex: number) {
             return [
                 h(
                     NButton,
@@ -182,7 +181,7 @@ const columns = [
                         style: {
                             marginLeft: '8px'
                         },
-                        onClick: () => { }
+                        onClick: () => delRecord(rowIndex)
                     },
                     { default: () => "删除" }
                 )
@@ -231,7 +230,7 @@ function getRecords() {
             console.log(recordData.list);
         } else {
             console.error('Data is not a string:', data);
-            // 处理错误情况  
+            // 处理错误情况
         }
     })
     .catch((err) => {
@@ -243,13 +242,38 @@ getRecords();
 // 新增配置
 function insertRecord() {
     console.log(recordData.item);
-    invoke("insert_record", { data: JSON.stringify(recordData.item) }).then((records) => {
+    recordData.list.push(recordData.item);
+    saveRecord().then((status) => {
+        if (status) {
+            message.success('新增成功');
+        } else {
+            message.error('新增失败');
+        }
+    });
+}
+
+// 删除配置
+function delRecord(id: number) {
+    recordData.list.splice(id, 1);
+    saveRecord().then((status) => {
+        if (status) {
+            message.success('删除成功');
+        } else {
+            message.error('删除失败');
+        }
+    });
+};
+
+// 保存配置
+async function saveRecord() {
+    return await invoke("save_record", { data: JSON.stringify(recordData.list) }).then((records) => {
         if (typeof records === 'string') {
             recordData.list = JSON.parse(records);
-            console.log(recordData.item);
+            return true;
         } else {
             console.error('Data is not a string:', records);
-            // 处理错误情况  
+            // 处理错误情况
+            return false;
         }
     });
 }
@@ -295,9 +319,7 @@ const handleValidateButtonClick = (e: MouseEvent) => {
     formRef.value?.validate((errors) => {
         if (!errors) {
             insertRecord();
-            message.success('验证成功')
         } else {
-
             console.log(recordData.item)
             console.log(errors)
             message.error('验证失败')

@@ -17,6 +17,7 @@ fn main() {
             greet,
             record::insert_record,
             record::get_records,
+            record::save_record,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
