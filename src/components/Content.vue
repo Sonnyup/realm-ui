@@ -52,7 +52,6 @@ const columns = [
     {
         title: '本地端口',
         key: 'local_port',
-
         align: 'center',
         width: 60,
         render(row: Record) {
@@ -75,7 +74,6 @@ const columns = [
     {
         title: '远程地址',
         key: 'remote_host',
-
         width: 200,
         ellipsis: true,
         render(row: Record) {
@@ -89,7 +87,7 @@ const columns = [
                     type: 'info',
                 },
                 {
-                    default: () => row.local_host
+                    default: () => row.remote_host
                 }
             )
         }
@@ -97,7 +95,6 @@ const columns = [
     {
         title: '远程端口',
         key: 'remote_port',
-
         align: 'center',
         width: 60,
         render(row: Record) {
@@ -120,7 +117,6 @@ const columns = [
     {
         title: '转发协议',
         key: 'protocol',
-
         align: 'center',
         width: 80,
         render(row: Record) {
@@ -149,29 +145,27 @@ const columns = [
         width: 100,
         align: 'center',
         render(row: Record, rowIndex: number) {
+            console.log(row.status);
             return [
                 h(
                     NButton,
                     {
                         strong: true,
-                        // tertiary: true,
-                        type: "primary",
+                        type: row.status === true ? "warning" : "primary",
                         size: "small",
-                        onClick: () => { }
+                        onClick: () => {
+                            if (row.status === true)
+                                closePort(rowIndex)
+                            else if (row.status === false)
+                                openPort(rowIndex)
+                        }
                     },
-                    { default: () => "开启" }
+                    {
+                        default: () => {
+                            return h("span", row.status === true ? "关闭" : "开启")
+                        }
+                    }
                 ),
-                // h(
-                //   NButton,
-                //   {
-                //     strong: true,
-                //     // tertiary: true,
-                //     type: "warning",
-                //     size: "small",
-                //     onClick: () => play(row)
-                //   },
-                //   { default: () => "关闭" }
-                // ),
                 h(
                     NButton,
                     {
@@ -213,8 +207,8 @@ type RecordData = {
 const recordData = reactive<RecordData>({
     item: {
         local_host: '127.0.0.1',
-        local_port: 1080,
-        remote_host: '127.0.0.1',
+        local_port: 9001,
+        remote_host: '115.231.23.49',
         remote_port: 80,
         protocol: ['tcp', 'udp'],
         status: false
@@ -233,9 +227,9 @@ function getRecords() {
             // 处理错误情况
         }
     })
-    .catch((err) => {
-        console.error(err);
-    });
+        .catch((err) => {
+            console.error(err);
+        });
 }
 getRecords();
 
@@ -276,6 +270,28 @@ async function saveRecord() {
             return false;
         }
     });
+}
+
+function openPort(index: number) {
+    console.log('open port');
+    const item = recordData.list[index];
+    invoke("open_port", { data: JSON.stringify(item) }).then((status) => {
+        if (status) {
+            message.success('开启成功');
+        } else {
+            message.error('开启失败');
+        }
+    })
+        .catch((err) => {
+            console.error(err);
+        });
+
+}
+
+function closePort(index: number) {
+    recordData.list[index].status = false;
+
+    message.success('关闭成功');
 }
 
 // 添加配置窗口

@@ -4,6 +4,12 @@ use record::Record;
 use serde_json::{from_str, to_string, to_writer_pretty};
 use std::fs::{File, OpenOptions};
 use std::io::Read;
+use std::os::windows::process::CommandExt;
+use std::process::Command;
+use std::sync::mpsc;
+use std::thread;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::time::Duration;
 
 #[tauri::command]
 pub fn insert_record(data: &str) -> Result<String, String> {
@@ -100,4 +106,39 @@ fn get_file_handle() -> Result<File, Box<dyn std::error::Error>> {
         .open(filename)?;
 
     Ok(file)
+}
+static mut NUM: i32 = 1;
+
+#[tauri::command]
+pub fn open_port(data: &str) -> Result<bool, String> {
+    let record: Record = serde_json::from_str(&data).map_err(|err| err.to_string())?;
+
+    let local_host_port = format!("{}:{}", record.local_host, record.local_port);
+    let remote_host_port = format!("{}:{}", record.remote_host, record.remote_port);
+
+    println!("open port: {} {}", local_host_port, remote_host_port);
+    unsafe {
+        NUM += 1;
+        println!("num: {}", &NUM);
+    }
+    let (sender, receiver) = mpsc::channel();
+    let handle = thread::spawn(move || {
+        let mut command = Command::new("realm");
+        command
+            .creation_flags(0x08000000) // 隐藏CMD窗口
+            .args(["-l", &local_host_port])
+            .args(["-r", &remote_host_port]);
+
+        let result = command.output();
+        println!("1");
+        println!("{:#?}", result);
+        sender.send(result).unwrap()
+    });
+    println!("{:#?}", handle);
+
+    let result = receiver.recv().unwrap();
+    println!("receive {:#?}", result);
+    // handle.join().unwrap();
+
+    Ok(true)
 }
