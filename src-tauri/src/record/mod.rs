@@ -112,8 +112,10 @@ struct Childs {
     child: Child,
 }
 
+// 进程存储
 static mut CHILDS: Vec<Childs> = Vec::new();
 
+// 开启端口转发
 #[tauri::command]
 pub fn open_port(data: &str) -> Result<u32, String> {
     let record: Record = serde_json::from_str(&data).map_err(|err| err.to_string())?;
@@ -124,14 +126,12 @@ pub fn open_port(data: &str) -> Result<u32, String> {
     println!("open port: {} {}", local_host_port, remote_host_port);
 
     let mut command = Command::new("realm");
-    let status = command
+    command
         .creation_flags(0x08000000) // 隐藏CMD窗口
         .args(["-l", &local_host_port])
         .args(["-r", &remote_host_port]);
 
-    println!("{:#?}", &status);
     let mut child = command.spawn().map_err(|err| err.to_string())?;
-    println!("{:#?}", &child.id());
 
     // 等待进程结果
     sleep(Duration::from_secs(1));
@@ -142,8 +142,6 @@ pub fn open_port(data: &str) -> Result<u32, String> {
         }
         Err(e) => println!("error attempting to wait: {e}"),
     }
-
-    println!("child: {:#?}", &child);
 
     let pid = child.id().clone();
     unsafe {
@@ -156,6 +154,7 @@ pub fn open_port(data: &str) -> Result<u32, String> {
     Ok(pid)
 }
 
+// 关闭进程转发
 #[tauri::command]
 pub fn close_port(pid: u32) -> Result<bool, String> {
     unsafe {
@@ -168,6 +167,7 @@ pub fn close_port(pid: u32) -> Result<bool, String> {
                 break;
             }
         }
+        sleep(Duration::from_secs(1));
         println!("CHILDS{:#?}", CHILDS);
     }
 

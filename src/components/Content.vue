@@ -2,6 +2,7 @@
 import { h, ref, reactive } from 'vue'
 import { invoke } from "@tauri-apps/api/tauri";
 import { Record } from "@/modules/Record";
+import { MdFlash, MdFlashOff, MdRemoveCircle } from '@vicons/ionicons4';
 import {
     NButton,
     NDataTable,
@@ -17,7 +18,8 @@ import {
     NSpace,
     FormRules,
     FormInst,
-    useMessage
+    useMessage,
+    NIcon
 } from 'naive-ui';
 
 const message = useMessage();
@@ -142,50 +144,67 @@ const columns = [
     {
         title: '操作',
         key: 'status',
-        width: 100,
+        width: 130,
         align: 'center',
         render(row: Record, rowIndex: number) {
             console.log(row.status);
-            return [
-                h(
-                    NButton,
-                    {
-                        strong: true,
-                        type: row.status > 0 ? "warning" : "primary",
-                        size: "small",
-                        onClick: () => {
-                            if (row.status > 0) {
-                                console.log("关闭");
-                                closePort(rowIndex)
-                            } else if (row.status <= 0) {
-                                console.log("开启");
-                                openPort(rowIndex)
+            return h(
+                NSpace,
+                {},
+                [
+                    h(
+                        NButton,
+                        {
+                            strong: true,
+                            type: row.status > 0 ? "warning" : "primary",
+                            size: "small",
+                            loading: btnLoading.value,
+                            onClick: () => {
+                                if (row.status > 0) {
+                                    console.log("关闭");
+                                    closePort(rowIndex)
+                                } else if (row.status <= 0) {
+                                    console.log("开启");
+                                    openPort(rowIndex)
+                                }
                             }
-                        }
-                    },
-                    {
-                        default: () => {
-                            return h("span", row.status > 0 ? "关闭" : "开启")
-                        }
-                    }
-                ),
-                h(
-                    NButton,
-                    {
-                        strong: true,
-                        type: "error",
-                        size: "small",
-                        style: {
-                            marginLeft: '8px'
                         },
-                        onClick: () => delRecord(rowIndex)
-                    },
-                    { default: () => "删除" }
-                )
-            ]
+                        {
+                            icon: () => h(NIcon, null, {
+                                default: () =>  {
+                                    if (row.status > 0) {
+                                        return h(MdFlashOff)
+                                    } else {
+                                        return h(MdFlash)
+                                    }
+                                }
+                            }),
+                            default: () => h("span", row.status > 0 ? "关闭" : "开启")
+                        }
+                    ),
+                    h(
+                        NButton,
+                        {
+                            strong: true,
+                            type: "error",
+                            size: "small",
+                            style: {
+                                marginLeft: '8px'
+                            },
+                            onClick: () => delRecord(rowIndex)
+                        },
+                        {
+                            icon: () => h(NIcon, null, h(MdRemoveCircle)),
+                            default: () => "删除"
+                        }
+                    )
+                ]
+            )
         }
     }
 ];
+
+const btnLoading = ref(false);
 
 // 页码控件
 const pagination = {
@@ -255,8 +274,7 @@ function insertRecord() {
 
 // 删除配置
 function delRecord(id: number) {
-    // recordData.list.splice(id, 1);
-
+    btnLoading.value = true;
     let saveData = JSON.parse(JSON.stringify(recordData.list));
     saveData.splice(id, 1)
 
@@ -266,8 +284,10 @@ function delRecord(id: number) {
         } else {
             message.error('删除失败');
         }
+        btnLoading.value = false;
     }).catch((err) => {
         message.error(err);
+        btnLoading.value = false;
     });
 };
 
@@ -293,31 +313,32 @@ async function saveRecord(saveData: Array<Record>) {
 // 打开端口转发
 function openPort(index: number) {
     console.log('open port');
+    btnLoading.value = true;
     const item = recordData.list[index];
     invoke("open_port", { data: JSON.stringify(item) }).then((pid) => {
-        // if (typeof pid === 'number') {
-            const id: number = pid as number;
-            if (id > 0) {
-                recordData.list[index].status = id;
-                saveRecord(recordData.list);
-                message.success('开启成功');
-            } else {
-                message.error('开启失败');
-            }
-        // } else {
-        //     console.error('Data is not a number:', pid);
-        // }
+        const id: number = pid as number;
+        if (id > 0) {
+            recordData.list[index].status = id;
+            saveRecord(recordData.list);
+            message.success('开启成功');
+        } else {
+            message.error('开启失败');
+        }
+        btnLoading.value = false;
 
     })
         .catch((err) => {
             console.error(err);
             // 处理错误情况
             message.error(err);
+            btnLoading.value = false;
+
         });
 
 }
 
 function closePort(index: number) {
+    btnLoading.value = true;
     invoke("close_port", { pid: recordData.list[index].status }).then((status) => {
         if (status) {
             recordData.list[index].status = 0;
@@ -326,11 +347,13 @@ function closePort(index: number) {
         } else {
             message.error('关闭失败');
         }
+        btnLoading.value = false;
     })
         .catch((err) => {
             console.error(err);
             // 处理错误情况
             message.error(err);
+            btnLoading.value = false;
         });
 }
 
