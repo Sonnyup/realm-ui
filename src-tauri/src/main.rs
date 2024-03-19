@@ -13,6 +13,24 @@ fn greet(name: &str) -> String {
 
 fn main() {
     tauri::Builder::default()
+        .on_window_event(|event| {
+            match event.event() {
+                tauri::WindowEvent::CloseRequested { api, .. } => {
+                    //阻止默认关闭
+                    api.prevent_close();
+                    // ....
+                    // 进行你的操作
+                    // ....
+                    // 关闭所有的进程
+
+                    record::close_all();
+                    let window = event.window().clone();
+                    let _ = window.close();
+                    println!("关闭窗口");
+                }
+                _ => {} //todo
+            }
+        })
         .invoke_handler(tauri::generate_handler![
             greet,
             record::insert_record,

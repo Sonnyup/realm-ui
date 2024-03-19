@@ -151,7 +151,7 @@ const columns = [
             return h(
                 NSpace,
                 {},
-                [
+                () => [
                     h(
                         NButton,
                         {
@@ -194,7 +194,7 @@ const columns = [
                             onClick: () => delRecord(rowIndex)
                         },
                         {
-                            icon: () => h(NIcon, null, h(MdRemoveCircle)),
+                            icon: () => h(NIcon, null, () => h(MdRemoveCircle, null , {})),
                             default: () => "删除"
                         }
                     )

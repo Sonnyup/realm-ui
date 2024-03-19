@@ -73,8 +73,6 @@ pub fn get_records() -> Result<String, String> {
 // 保存配置
 #[tauri::command]
 pub fn save_record(data: &str) -> Result<String, String> {
-    println!("data: {}", data);
-
     let records: Vec<Record> = from_str(&data).map_err(|err| err.to_string())?;
 
     let file = File::options()
@@ -134,7 +132,7 @@ pub fn open_port(data: &str) -> Result<u32, String> {
     let mut child = command.spawn().map_err(|err| err.to_string())?;
 
     // 等待进程结果
-    sleep(Duration::from_secs(1));
+    sleep(Duration::from_millis(200));
     match child.try_wait() {
         Ok(Some(_)) => return Ok(0),
         Ok(None) => {
@@ -161,15 +159,22 @@ pub fn close_port(pid: u32) -> Result<bool, String> {
         for (k, c) in CHILDS.iter_mut().enumerate() {
             if c.pid == pid {
                 let result = c.child.kill();
-                println!("kill child pid: {}", pid);
-                println!("kill child result: {:#?}", result);
                 CHILDS.remove(k);
                 break;
             }
         }
-        sleep(Duration::from_secs(1));
-        println!("CHILDS{:#?}", CHILDS);
+        sleep(Duration::from_millis(200));
     }
 
     Ok(true)
+}
+
+// 清空进程
+pub fn close_all() {
+    unsafe {
+        for c in &mut CHILDS {
+            let result = c.child.kill();
+            println!("kill child result: {:#?}", result);
+        }
+    }
 }

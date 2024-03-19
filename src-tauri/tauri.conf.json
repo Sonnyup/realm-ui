@@ -19,7 +19,7 @@
     },
     "windows": [
       {
-        "title": "realm-ui",
+        "title": "端口转发",
         "width": 1024,
         "height": 600
       }
