@@ -158,7 +158,7 @@ pub fn close_port(pid: u32) -> Result<bool, String> {
     unsafe {
         for (k, c) in CHILDS.iter_mut().enumerate() {
             if c.pid == pid {
-                let result = c.child.kill();
+                let _ = c.child.kill();
                 CHILDS.remove(k);
                 break;
             }
@@ -173,8 +173,7 @@ pub fn close_port(pid: u32) -> Result<bool, String> {
 pub fn close_all() {
     unsafe {
         for c in &mut CHILDS {
-            let result = c.child.kill();
-            println!("kill child result: {:#?}", result);
+            let _ = c.child.kill();
         }
     }
 }

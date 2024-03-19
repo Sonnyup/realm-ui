@@ -6,8 +6,8 @@
     "distDir": "../dist"
   },
   "package": {
-    "productName": "realm-ui",
-    "version": "0.0.0"
+    "productName": "端口转发",
+    "version": "0.0.1"
   },
   "tauri": {
     "allowlist": {

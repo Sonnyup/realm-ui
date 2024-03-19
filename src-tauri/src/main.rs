@@ -9,8 +9,6 @@ fn greet(name: &str) -> String {
     format!("Hello, {}! You've been greeted from Rust!", name)
 }
 
-
-
 fn main() {
     tauri::Builder::default()
         .on_window_event(|event| {

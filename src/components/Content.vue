@@ -171,7 +171,7 @@ const columns = [
                         },
                         {
                             icon: () => h(NIcon, null, {
-                                default: () =>  {
+                                default: () => {
                                     if (row.status > 0) {
                                         return h(MdFlashOff)
                                     } else {
@@ -191,10 +191,10 @@ const columns = [
                             style: {
                                 marginLeft: '8px'
                             },
-                            onClick: () => delRecord(rowIndex)
+                            onClick: () => openDel(rowIndex)
                         },
                         {
-                            icon: () => h(NIcon, null, () => h(MdRemoveCircle, null , {})),
+                            icon: () => h(NIcon, null, () => h(MdRemoveCircle, null, {})),
                             default: () => "删除"
                         }
                     )
@@ -270,26 +270,8 @@ function insertRecord() {
     }).catch((err) => {
         message.error(err);
     });
+    showModal.value = false;
 }
-
-// 删除配置
-function delRecord(id: number) {
-    btnLoading.value = true;
-    let saveData = JSON.parse(JSON.stringify(recordData.list));
-    saveData.splice(id, 1)
-
-    saveRecord(saveData).then((status) => {
-        if (status) {
-            message.success('删除成功');
-        } else {
-            message.error('删除失败');
-        }
-        btnLoading.value = false;
-    }).catch((err) => {
-        message.error(err);
-        btnLoading.value = false;
-    });
-};
 
 // 保存配置
 async function saveRecord(saveData: Array<Record>) {
@@ -337,6 +319,7 @@ function openPort(index: number) {
 
 }
 
+// 关闭端口
 function closePort(index: number) {
     btnLoading.value = true;
     invoke("close_port", { pid: recordData.list[index].status }).then((status) => {
@@ -356,6 +339,53 @@ function closePort(index: number) {
             btnLoading.value = false;
         });
 }
+
+// 删除确认框
+const delModal = ref(false);
+
+// 删除的记录下标
+const delIndex = ref<number>(-1);
+
+// 确认删除
+const submitDel = () => {
+    delModal.value = false;
+
+    if(delIndex.value < 0){
+        message.error("未找到删除项");
+        return false;
+    }
+
+    let saveData = JSON.parse(JSON.stringify(recordData.list));
+    const item = saveData[delIndex.value];
+
+    if (item.status > 0) {
+        message.warning("先关闭转发后再删除");
+        return false;
+    }
+
+    saveData.splice(delIndex.value, 1)
+    saveRecord(saveData).then((status) => {
+        if (status) {
+            message.success('删除成功');
+        } else {
+            message.error('删除失败');
+        }
+    }).catch((err) => {
+        message.error(err);
+    });
+};
+
+// 取消删除
+const cancelDel = () => {
+    delModal.value = false;
+    delIndex.value = -1;
+};
+
+// 打开删除框
+function openDel(id: number) {
+    delModal.value = true;
+    delIndex.value = id;
+};
 
 // 添加配置窗口
 const showModal = ref(false);
@@ -418,7 +448,7 @@ const handleValidateButtonClick = (e: MouseEvent) => {
 
     <!-- 添加转发 -->
     <n-modal v-model:show="showModal" class="custom-card" preset="card" :style="bodyStyle" title="添加转发" size="small"
-        :bordered="false" :segmented="segmented" footer-style="display: flex;flex-direction: row-reverse;">
+        :bordered="false" :segmented="segmented" :mask-closable="false" footer-style="display: flex;flex-direction: row-reverse;">
         <template #header-extra>
         </template>
         <n-form ref="formRef" :model="recordData.item" :rules="rules">
@@ -451,6 +481,9 @@ const handleValidateButtonClick = (e: MouseEvent) => {
             <n-button class="add-btn" type="info" size="large" @click="handleValidateButtonClick">确认</n-button>
         </template>
     </n-modal>
+
+    <n-modal v-model:show="delModal" preset="dialog" title="确认" content="确定要删除？" type="warning" :mask-closable="false" positive-text="确认" negative-text="取消"
+        @positive-click="submitDel" @negative-click="cancelDel" />
 </template>
 
 <style lang="scss" scoped>
