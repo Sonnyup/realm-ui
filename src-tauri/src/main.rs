@@ -3,14 +3,8 @@
 
 use realm_ui::record;
 
-// Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
-#[tauri::command]
-fn greet(name: &str) -> String {
-    format!("Hello, {}! You've been greeted from Rust!", name)
-}
-
 fn main() {
-    tauri::Builder::default()
+    let app = tauri::Builder::default()
         .on_window_event(|event| {
             match event.event() {
                 tauri::WindowEvent::CloseRequested { api, .. } => {
@@ -30,13 +24,19 @@ fn main() {
             }
         })
         .invoke_handler(tauri::generate_handler![
-            greet,
-            record::insert_record,
             record::get_records,
             record::save_record,
             record::open_port,
             record::close_port,
         ])
-        .run(tauri::generate_context!())
+        .build(tauri::generate_context!())
         .expect("error while running tauri application");
+
+    app.run(|_app_handle, event| match event {
+        tauri::RunEvent::Ready => {
+            // 初始化端口转发
+            let _ = record::init_ports();
+        }
+        _ => {}
+    });
 }

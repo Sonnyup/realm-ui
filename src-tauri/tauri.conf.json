@@ -6,7 +6,7 @@
     "distDir": "../dist"
   },
   "package": {
-    "productName": "端口转发",
+    "productName": "REALM-UI",
     "version": "0.0.1"
   },
   "tauri": {
@@ -19,7 +19,7 @@
     },
     "windows": [
       {
-        "title": "端口转发",
+        "title": "REALM-UI",
         "width": 1024,
         "height": 600
       }
