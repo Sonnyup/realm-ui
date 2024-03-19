@@ -4,6 +4,7 @@ use record::Record;
 use serde_json::{from_str, to_string, to_writer_pretty};
 use std::fs::{File, OpenOptions};
 use std::io::Read;
+use std::net::IpAddr;
 use std::os::windows::process::CommandExt;
 use std::process::{Child, Command};
 use std::thread::sleep;
@@ -167,4 +168,27 @@ pub fn init_ports() -> Result<(), String> {
     let _ = save_record(&json_str);
     // println!("init_ports: {:?}", &records);
     Ok(())
+}
+
+use trust_dns_resolver::config::*;
+use trust_dns_resolver::Resolver;
+
+// 获取IP地址
+pub fn get_ip_address(domain_name: &str) -> Result<IpAddr, String> {
+    // 使用函数
+    let resolver = Resolver::new(ResolverConfig::default(), ResolverOpts::default())
+        .map_err(|err| err.to_string())?;
+
+    let response = resolver
+        .lookup_ip(domain_name)
+        .map_err(|err| err.to_string())?;
+
+    let address = response.iter().next().expect("no addresses returned!");
+    if address.is_ipv4() {
+        println!("IPV4: {}", address);
+        // assert_eq!(address, IpAddr::V4(Ipv4Addr::new(93, 184, 216, 34)));
+    } else {
+        println!("IPV6: {}", address);
+    }
+    Ok(address)
 }

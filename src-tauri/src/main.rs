@@ -36,6 +36,10 @@ fn main() {
         tauri::RunEvent::Ready => {
             // 初始化端口转发
             let _ = record::init_ports();
+
+            // 获取IP地址
+            let a = record::get_ip_address("www.baidu.com");
+            println!("a: {:?}", &a);
         }
         _ => {}
     });
