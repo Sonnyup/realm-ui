@@ -8,10 +8,10 @@ pub struct Record {
     pub remote_host: String,
     pub remote_port: u32,
     pub protocol: Vec<String>,
-    pub status: bool,
+    pub status: u32,
 }
 
 impl Record {
-    
-    
+
+
 }

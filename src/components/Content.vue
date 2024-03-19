@@ -151,18 +151,21 @@ const columns = [
                     NButton,
                     {
                         strong: true,
-                        type: row.status === true ? "warning" : "primary",
+                        type: row.status > 0 ? "warning" : "primary",
                         size: "small",
                         onClick: () => {
-                            if (row.status === true)
+                            if (row.status > 0) {
+                                console.log("关闭");
                                 closePort(rowIndex)
-                            else if (row.status === false)
+                            } else if (row.status <= 0) {
+                                console.log("开启");
                                 openPort(rowIndex)
+                            }
                         }
                     },
                     {
                         default: () => {
-                            return h("span", row.status === true ? "关闭" : "开启")
+                            return h("span", row.status > 0 ? "关闭" : "开启")
                         }
                     }
                 ),
@@ -211,7 +214,7 @@ const recordData = reactive<RecordData>({
         remote_host: '115.231.23.49',
         remote_port: 80,
         protocol: ['tcp', 'udp'],
-        status: false
+        status: 0
     },
     list: []
 });
@@ -224,43 +227,53 @@ function getRecords() {
             console.log(recordData.list);
         } else {
             console.error('Data is not a string:', data);
-            // 处理错误情况
         }
     })
         .catch((err) => {
             console.error(err);
+            // 处理错误情况
+            message.error(err);
         });
 }
 getRecords();
 
 // 新增配置
 function insertRecord() {
-    console.log(recordData.item);
-    recordData.list.push(recordData.item);
-    saveRecord().then((status) => {
+    let saveData = JSON.parse(JSON.stringify(recordData.list));
+    saveData.push(recordData.item);
+
+    saveRecord(saveData).then((status) => {
         if (status) {
             message.success('新增成功');
         } else {
             message.error('新增失败');
         }
+    }).catch((err) => {
+        message.error(err);
     });
 }
 
 // 删除配置
 function delRecord(id: number) {
-    recordData.list.splice(id, 1);
-    saveRecord().then((status) => {
+    // recordData.list.splice(id, 1);
+
+    let saveData = JSON.parse(JSON.stringify(recordData.list));
+    saveData.splice(id, 1)
+
+    saveRecord(saveData).then((status) => {
         if (status) {
             message.success('删除成功');
         } else {
             message.error('删除失败');
         }
+    }).catch((err) => {
+        message.error(err);
     });
 };
 
 // 保存配置
-async function saveRecord() {
-    return await invoke("save_record", { data: JSON.stringify(recordData.list) }).then((records) => {
+async function saveRecord(saveData: Array<Record>) {
+    return await invoke("save_record", { data: JSON.stringify(saveData) }).then((records) => {
         if (typeof records === 'string') {
             recordData.list = JSON.parse(records);
             return true;
@@ -269,6 +282,11 @@ async function saveRecord() {
             // 处理错误情况
             return false;
         }
+    }).catch((err) => {
+        console.error(err);
+        message.error(err);
+        // 处理错误情况
+        return false;
     });
 }
 
@@ -276,33 +294,44 @@ async function saveRecord() {
 function openPort(index: number) {
     console.log('open port');
     const item = recordData.list[index];
-    invoke("open_port", { data: JSON.stringify(item) }).then((status) => {
-        if (status) {
-            recordData.list[index].status = true;
-            message.success('开启成功');
-        } else {
-            message.error('开启失败');
-        }
+    invoke("open_port", { data: JSON.stringify(item) }).then((pid) => {
+        // if (typeof pid === 'number') {
+            const id: number = pid as number;
+            if (id > 0) {
+                recordData.list[index].status = id;
+                saveRecord(recordData.list);
+                message.success('开启成功');
+            } else {
+                message.error('开启失败');
+            }
+        // } else {
+        //     console.error('Data is not a number:', pid);
+        // }
+
     })
         .catch((err) => {
             console.error(err);
+            // 处理错误情况
+            message.error(err);
         });
 
 }
 
 function closePort(index: number) {
-    // recordData.list[index].status = false;
-    invoke("close_port", { data: "1" }).then((status) => {
+    invoke("close_port", { pid: recordData.list[index].status }).then((status) => {
         if (status) {
-            recordData.list[index].status = false;
+            recordData.list[index].status = 0;
+            saveRecord(recordData.list);
             message.success('关闭成功');
         } else {
             message.error('关闭失败');
         }
     })
-    .catch((err) => {
-        console.error(err);
-    });
+        .catch((err) => {
+            console.error(err);
+            // 处理错误情况
+            message.error(err);
+        });
 }
 
 // 添加配置窗口
