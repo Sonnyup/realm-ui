@@ -9,3 +9,5 @@ Tauri开发的，边做边学。
 > 转发协议没有做功能，勾上也没效果
 
 不一定会更新，有需要的大佬自己可以去改。
+
+[下载在这里](https://gitee.com/luoyu318/realm-ui/releases)
