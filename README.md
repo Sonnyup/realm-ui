@@ -11,3 +11,7 @@ Tauri开发的，边做边学。
 不一定会更新，有需要的大佬自己可以去改。
 
 [下载在这里](https://gitee.com/luoyu318/realm-ui/releases)
+
+效果图
+![Alt text](images/image.png)
+![Alt text](images/image-1.png)
