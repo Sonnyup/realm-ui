@@ -4,7 +4,6 @@ use record::Record;
 use serde_json::{from_str, to_string, to_writer_pretty};
 use std::fs::{File, OpenOptions};
 use std::io::Read;
-use std::net::IpAddr;
 use std::os::windows::process::CommandExt;
 use std::process::{Child, Command};
 use std::thread::sleep;
@@ -52,8 +51,6 @@ fn get_file_contents() -> Result<String, String> {
         .open(filename)
         .map_err(|err| err.to_string())?;
 
-    // let mut file: File = get_file_handle().map_err(|err|  err.to_string())?;
-
     // 读取文件内容到字符串中
     let mut contents = String::new();
     file.read_to_string(&mut contents)
@@ -87,8 +84,12 @@ pub fn open_port(data: &str) -> Result<u32, String> {
 
 // 开启端口转发
 fn port_forward(record: &Record) -> Result<u32, String> {
+    let remote_ip = get_ip_address(&record.remote_host)
+        .map_err(|_| String::from("地址解析失败，请确认后重试！"))?;
+    println!("remote_ip:{}", remote_ip);
+
     let local_host_port = format!("{}:{}", record.local_host, record.local_port);
-    let remote_host_port = format!("{}:{}", record.remote_host, record.remote_port);
+    let remote_host_port = format!("{}:{}", remote_ip, record.remote_port);
     println!("open port: {} {}", local_host_port, remote_host_port);
 
     let mut command = Command::new("realm");
@@ -97,10 +98,12 @@ fn port_forward(record: &Record) -> Result<u32, String> {
         .args(["-l", &local_host_port])
         .args(["-r", &remote_host_port]);
 
+
+    println!("command: {:?}", command);
     let mut child = command.spawn().map_err(|err| err.to_string())?;
 
     // 等待进程结果
-    sleep(Duration::from_millis(200));
+    sleep(Duration::from_millis(300));
     match child.try_wait() {
         Ok(Some(_)) => return Ok(0),
         Ok(None) => {
@@ -174,7 +177,7 @@ use trust_dns_resolver::config::*;
 use trust_dns_resolver::Resolver;
 
 // 获取IP地址
-pub fn get_ip_address(domain_name: &str) -> Result<IpAddr, String> {
+pub fn get_ip_address(domain_name: &str) -> Result<String, String> {
     // 使用函数
     let resolver = Resolver::new(ResolverConfig::default(), ResolverOpts::default())
         .map_err(|err| err.to_string())?;
@@ -184,11 +187,5 @@ pub fn get_ip_address(domain_name: &str) -> Result<IpAddr, String> {
         .map_err(|err| err.to_string())?;
 
     let address = response.iter().next().expect("no addresses returned!");
-    if address.is_ipv4() {
-        println!("IPV4: {}", address);
-        // assert_eq!(address, IpAddr::V4(Ipv4Addr::new(93, 184, 216, 34)));
-    } else {
-        println!("IPV6: {}", address);
-    }
-    Ok(address)
+    Ok(address.to_string())
 }

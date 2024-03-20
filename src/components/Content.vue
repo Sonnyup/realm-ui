@@ -2,7 +2,7 @@
 import { h, ref, reactive } from 'vue'
 import { invoke } from "@tauri-apps/api/tauri";
 import { Record } from "@/modules/Record";
-import { MdFlash, MdFlashOff, MdRemoveCircle } from '@vicons/ionicons4';
+import { MdFlash, MdFlashOff, MdRemoveCircle, MdCreate, MdAddCircle } from '@vicons/ionicons4';
 import {
     NButton,
     NDataTable,
@@ -19,60 +19,39 @@ import {
     FormRules,
     FormInst,
     useMessage,
-    NIcon
+    NIcon,
+    NButtonGroup
 } from 'naive-ui';
 
 const message = useMessage();
 
-// 配置项表单
+// 记录项表单
 const formRef = ref<FormInst | null>(null)
 
 // 表格配置
 const columns = [
-    {
-        title: '本地地址',
-        key: 'local_host',
-        width: 200,
-        // resizable: true,
-        ellipsis: true,
-        render(row: Record) {
-            return h(
-                NGradientText,
-                {
-                    style: {
-                        marginRight: '6px',
-                        fontSize: '13px',
-                    },
-                    type: 'success',
-                },
-                {
-                    default: () => row.local_host
-                }
-            )
-        }
-    },
-    {
-        title: '本地端口',
-        key: 'local_port',
-        align: 'center',
-        width: 60,
-        render(row: Record) {
-            return h(
-                NTag,
-                {
-                    style: {
-                        marginRight: '6px'
-                    },
-                    type: 'success',
-                    bordered: false,
-                    size: 'small'
-                },
-                {
-                    default: () => row.local_port
-                }
-            )
-        }
-    },
+    // {
+    //     title: '本地地址',
+    //     key: 'local_host',
+    //     width: 80,
+    //     // resizable: true,
+    //     ellipsis: true,
+    //     render(row: Record) {
+    //         return h(
+    //             NGradientText,
+    //             {
+    //                 style: {
+    //                     marginRight: '6px',
+    //                     fontSize: '13px',
+    //                 },
+    //                 type: 'success',
+    //             },
+    //             {
+    //                 default: () => row.local_host
+    //             }
+    //         )
+    //     }
+    // },
     {
         title: '远程地址',
         key: 'remote_host',
@@ -90,6 +69,28 @@ const columns = [
                 },
                 {
                     default: () => row.remote_host
+                }
+            )
+        }
+    },
+    {
+        title: '本地端口',
+        key: 'local_port',
+        align: 'center',
+        width: 60,
+        render(row: Record) {
+            return h(
+                NTag,
+                {
+                    style: {
+                        marginRight: '6px'
+                    },
+                    type: 'error',
+                    bordered: false,
+                    size: 'small'
+                },
+                {
+                    default: () => row.local_port
                 }
             )
         }
@@ -129,7 +130,7 @@ const columns = [
                         style: {
                             marginRight: '6px',
                         },
-                        type: 'error',
+                        type: 'success',
                         bordered: false,
                         size: 'small'
                     },
@@ -149,7 +150,7 @@ const columns = [
         render(row: Record, rowIndex: number) {
             console.log(row.status);
             return h(
-                NSpace,
+                NButtonGroup,
                 {},
                 () => [
                     h(
@@ -186,8 +187,27 @@ const columns = [
                         NButton,
                         {
                             strong: true,
+                            type: "info",
+                            disabled: row.status > 0 ? true : false,
+                            size: "small",
+                            style: {
+                                marginLeft: '8px'
+                            },
+                            onClick: () => openEditForm(rowIndex)
+                        },
+                        {
+                            icon: () => h(NIcon, null, () => h(MdCreate, null, {})),
+                            // default: () => "编辑"
+                        }
+                    ),
+                    h(
+                        NButton,
+                        {
+                            strong: true,
+                            disabled: row.status > 0 ? true : false,
                             type: "error",
                             size: "small",
+                            round: true,
                             style: {
                                 marginLeft: '8px'
                             },
@@ -195,7 +215,7 @@ const columns = [
                         },
                         {
                             icon: () => h(NIcon, null, () => h(MdRemoveCircle, null, {})),
-                            default: () => "删除"
+                            // default: () => "删除"
                         }
                     )
                 ]
@@ -225,20 +245,13 @@ type RecordData = {
     list: Record[];
 }
 
-// 配置列表
+// 记录列表
 const recordData = reactive<RecordData>({
-    item: {
-        local_host: '127.0.0.1',
-        local_port: 9001,
-        remote_host: '115.231.23.49',
-        remote_port: 80,
-        protocol: ['tcp', 'udp'],
-        status: 0
-    },
+    item: <Record>{},
     list: []
 });
 
-// 获取配置列表
+// 获取记录列表
 function getRecords() {
     invoke("get_records").then((data) => {
         if (typeof data === 'string') {
@@ -254,26 +267,61 @@ function getRecords() {
             message.error(err);
         });
 }
+// 加载初始数据
 getRecords();
 
-// 新增配置
-function insertRecord() {
+
+// 添加记录窗口
+const showModal = ref(false);
+// 添加编辑控制
+const editIndex = ref(-1);
+
+
+// 创建记录
+function createRecord() {
     let saveData = JSON.parse(JSON.stringify(recordData.list));
-    saveData.push(recordData.item);
+    if(editIndex.value > 0){
+        saveData[editIndex.value] = recordData.item;
+    }else{
+        saveData.push(recordData.item);
+    }
 
     saveRecord(saveData).then((status) => {
         if (status) {
-            message.success('新增成功');
+            message.success('操作成功');
         } else {
-            message.error('新增失败');
+            message.error('操作失败');
         }
     }).catch((err) => {
         message.error(err);
     });
     showModal.value = false;
+    editIndex.value = -1;
 }
 
-// 保存配置
+// 编辑记录窗口
+function openEditForm(index: number){
+    recordData.item = {...recordData.list[index]};
+    editIndex.value = index;
+    showModal.value = true;
+}
+
+// 添加记录窗口
+function openCreateForm(){
+    recordData.item = {
+        local_host: '0.0.0.0',
+        local_port: 8080,
+        remote_host: '',
+        remote_port: 80,
+        protocol: ['tcp', 'udp'],
+        status: 0
+    };
+    editIndex.value = -1;
+    showModal.value = true;
+}
+
+
+// 保存记录
 async function saveRecord(saveData: Array<Record>) {
     return await invoke("save_record", { data: JSON.stringify(saveData) }).then((records) => {
         if (typeof records === 'string') {
@@ -350,7 +398,7 @@ const delIndex = ref<number>(-1);
 const submitDel = () => {
     delModal.value = false;
 
-    if(delIndex.value < 0){
+    if (delIndex.value < 0) {
         message.error("未找到删除项");
         return false;
     }
@@ -386,9 +434,6 @@ function openDel(id: number) {
     delModal.value = true;
     delIndex.value = id;
 };
-
-// 添加配置窗口
-const showModal = ref(false);
 
 // 表单验证规则
 const rules: FormRules = {
@@ -427,11 +472,11 @@ const handleValidateButtonClick = (e: MouseEvent) => {
     e.preventDefault()
     formRef.value?.validate((errors) => {
         if (!errors) {
-            insertRecord();
+            createRecord();
         } else {
             console.log(recordData.item)
-            console.log(errors)
-            message.error('验证失败')
+            console.log(errors[0][0].message)
+            message.error(<string>errors[0][0].message)
         }
     })
 };
@@ -443,26 +488,33 @@ const handleValidateButtonClick = (e: MouseEvent) => {
     <div class="container">
         <n-data-table style="height:100%;" size="small" :columns="columns" :data="recordData.list"
             :pagination="pagination" :bordered="false" :single-line="false" />
-        <n-button class="add-btn" type="info" size="large" @click="showModal = true">添加</n-button>
+        <n-button class="add-btn" type="info" size="medium" @click="openCreateForm">
+            <template #icon>
+                <n-icon>
+                    <MdAddCircle/>
+                </n-icon>
+            </template>
+        </n-button>
     </div>
 
-    <!-- 添加转发 -->
-    <n-modal v-model:show="showModal" class="custom-card" preset="card" :style="bodyStyle" title="添加转发" size="small"
-        :bordered="false" :segmented="segmented" :mask-closable="false" footer-style="display: flex;flex-direction: row-reverse;">
+    <!-- 添加记录 -->
+    <n-modal v-model:show="showModal" class="custom-card" preset="card" :style="bodyStyle" :title="editIndex > 0 ? '编辑记录' : '添加记录'" size="small"
+        :bordered="false" :segmented="segmented" :mask-closable="false"
+        footer-style="display: flex;flex-direction: row-reverse;">
         <template #header-extra>
         </template>
         <n-form ref="formRef" :model="recordData.item" :rules="rules">
-            <n-form-item path="local_host" label="本地地址（IP、域名）">
-                <n-input v-model:value="recordData.item.local_host" @keydown.enter.prevent />
+            <n-form-item path="local_host" label="本地地址">
+                <n-input v-model:value="recordData.item.local_host" :disabled="true" placeholder="输入本地IP" @keydown.enter.prevent />
             </n-form-item>
             <n-form-item path="local_port" label="本地端口">
-                <n-input-number v-model:value="recordData.item.local_port" @keydown.enter.prevent />
+                <n-input-number v-model:value="recordData.item.local_port" placeholder="输入本地端口" @keydown.enter.prevent />
             </n-form-item>
             <n-form-item path="remote_host" label="远程地址（IP、域名）">
-                <n-input v-model:value="recordData.item.remote_host" @keydown.enter.prevent />
+                <n-input v-model:value="recordData.item.remote_host" placeholder="输入远程地址（IP或域名）" @keydown.enter.prevent />
             </n-form-item>
             <n-form-item path="remote_port" label="远程端口">
-                <n-input-number v-model:value="recordData.item.remote_port" @keydown.enter.prevent />
+                <n-input-number v-model:value="recordData.item.remote_port" placeholder="输入远程端口" @keydown.enter.prevent />
             </n-form-item>
             <n-form-item label="转发协议" path="protocol">
                 <n-checkbox-group v-model:value="recordData.item.protocol">
@@ -482,8 +534,8 @@ const handleValidateButtonClick = (e: MouseEvent) => {
         </template>
     </n-modal>
 
-    <n-modal v-model:show="delModal" preset="dialog" title="确认" content="确定要删除？" type="warning" :mask-closable="false" positive-text="确认" negative-text="取消"
-        @positive-click="submitDel" @negative-click="cancelDel" />
+    <n-modal v-model:show="delModal" preset="dialog" title="确认" content="确定要删除？" type="warning" :mask-closable="false"
+        positive-text="确认" negative-text="取消" @positive-click="submitDel" @negative-click="cancelDel" />
 </template>
 
 <style lang="scss" scoped>
