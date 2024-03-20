@@ -280,7 +280,7 @@ const editIndex = ref(-1);
 // 创建记录
 function createRecord() {
     let saveData = JSON.parse(JSON.stringify(recordData.list));
-    if(editIndex.value > 0){
+    if(editIndex.value > -1){
         saveData[editIndex.value] = recordData.item;
     }else{
         saveData.push(recordData.item);
@@ -498,7 +498,7 @@ const handleValidateButtonClick = (e: MouseEvent) => {
     </div>
 
     <!-- 添加记录 -->
-    <n-modal v-model:show="showModal" class="custom-card" preset="card" :style="bodyStyle" :title="editIndex > 0 ? '编辑记录' : '添加记录'" size="small"
+    <n-modal v-model:show="showModal" class="custom-card" preset="card" :style="bodyStyle" :title="editIndex > -1 ? '编辑记录' : '添加记录'" size="small"
         :bordered="false" :segmented="segmented" :mask-closable="false"
         footer-style="display: flex;flex-direction: row-reverse;">
         <template #header-extra>
