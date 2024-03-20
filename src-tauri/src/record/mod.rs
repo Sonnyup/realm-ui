@@ -90,6 +90,7 @@ fn port_forward(record: &Record) -> Result<u32, String> {
 
     let local_host_port = format!("{}:{}", record.local_host, record.local_port);
     let remote_host_port = format!("{}:{}", remote_ip, record.remote_port);
+    let protocol = &record.protocol;
     println!("open port: {} {}", local_host_port, remote_host_port);
 
     let mut command = Command::new("realm");
@@ -98,6 +99,9 @@ fn port_forward(record: &Record) -> Result<u32, String> {
         .args(["-l", &local_host_port])
         .args(["-r", &remote_host_port]);
 
+    if protocol.contains(&String::from("udp")) {
+        command.args(["-u"]);
+    }
 
     println!("command: {:?}", command);
     let mut child = command.spawn().map_err(|err| err.to_string())?;
