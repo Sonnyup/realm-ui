@@ -20,7 +20,8 @@ import {
     FormInst,
     useMessage,
     NIcon,
-    NButtonGroup
+    NButtonGroup,
+    NPopover
 } from 'naive-ui';
 
 const message = useMessage();
@@ -30,28 +31,6 @@ const formRef = ref<FormInst | null>(null)
 
 // 表格配置
 const columns = [
-    // {
-    //     title: '本地地址',
-    //     key: 'local_host',
-    //     width: 80,
-    //     // resizable: true,
-    //     ellipsis: true,
-    //     render(row: Record) {
-    //         return h(
-    //             NGradientText,
-    //             {
-    //                 style: {
-    //                     marginRight: '6px',
-    //                     fontSize: '13px',
-    //                 },
-    //                 type: 'success',
-    //             },
-    //             {
-    //                 default: () => row.local_host
-    //             }
-    //         )
-    //     }
-    // },
     {
         title: '远程地址',
         key: 'remote_host',
@@ -59,16 +38,33 @@ const columns = [
         ellipsis: true,
         render(row: Record) {
             return h(
-                NGradientText,
+                NPopover,
                 {
-                    style: {
-                        marginRight: '6px',
-                        fontSize: '13px',
-                    },
-                    type: 'info',
+                    trigger: 'hover',
+                    placement: 'bottom'
                 },
                 {
-                    default: () => row.remote_host
+                    trigger: () => h(
+                        NGradientText,
+                        {
+                            style: {
+                                marginRight: '6px',
+                                fontSize: '13px',
+                                cursor: 'pointer'
+                            },
+                            type: 'info',
+                        },
+                        {
+                            default: () => row.remote_host
+                        }
+                    ),
+                    default: () => h(
+                        'span',
+                        {},
+                        {
+                            default: () => row.remote_host
+                        }
+                    )
                 }
             )
         }
@@ -148,7 +144,7 @@ const columns = [
         width: 130,
         align: 'center',
         render(row: Record, rowIndex: number) {
-            console.log(row.status);
+            console.log(row.pid);
             return h(
                 NButtonGroup,
                 {},
@@ -157,14 +153,14 @@ const columns = [
                         NButton,
                         {
                             strong: true,
-                            type: row.status > 0 ? "warning" : "primary",
+                            type: row.pid > 0 ? "warning" : "primary",
                             size: "small",
                             loading: btnLoading.value,
                             onClick: () => {
-                                if (row.status > 0) {
+                                if (row.pid > 0) {
                                     console.log("关闭");
                                     closePort(rowIndex)
-                                } else if (row.status <= 0) {
+                                } else if (row.pid <= 0) {
                                     console.log("开启");
                                     openPort(rowIndex)
                                 }
@@ -173,14 +169,14 @@ const columns = [
                         {
                             icon: () => h(NIcon, null, {
                                 default: () => {
-                                    if (row.status > 0) {
+                                    if (row.pid > 0) {
                                         return h(MdFlashOff)
                                     } else {
                                         return h(MdFlash)
                                     }
                                 }
                             }),
-                            default: () => h("span", row.status > 0 ? "关闭" : "开启")
+                            default: () => h("span", row.pid > 0 ? "关闭" : "开启")
                         }
                     ),
                     h(
@@ -188,7 +184,7 @@ const columns = [
                         {
                             strong: true,
                             type: "info",
-                            disabled: row.status > 0 ? true : false,
+                            disabled: row.pid > 0 ? true : false,
                             size: "small",
                             style: {
                                 marginLeft: '8px'
@@ -204,7 +200,7 @@ const columns = [
                         NButton,
                         {
                             strong: true,
-                            disabled: row.status > 0 ? true : false,
+                            disabled: row.pid > 0 ? true : false,
                             type: "error",
                             size: "small",
                             round: true,
@@ -280,9 +276,9 @@ const editIndex = ref(-1);
 // 创建记录
 function createRecord() {
     let saveData = JSON.parse(JSON.stringify(recordData.list));
-    if(editIndex.value > -1){
+    if (editIndex.value > -1) {
         saveData[editIndex.value] = recordData.item;
-    }else{
+    } else {
         saveData.push(recordData.item);
     }
 
@@ -300,21 +296,21 @@ function createRecord() {
 }
 
 // 编辑记录窗口
-function openEditForm(index: number){
-    recordData.item = {...recordData.list[index]};
+function openEditForm(index: number) {
+    recordData.item = { ...recordData.list[index] };
     editIndex.value = index;
     showModal.value = true;
 }
 
 // 添加记录窗口
-function openCreateForm(){
+function openCreateForm() {
     recordData.item = {
         local_host: '0.0.0.0',
         local_port: 8080,
         remote_host: '',
         remote_port: 80,
         protocol: ['tcp', 'udp'],
-        status: 0
+        pid: 0
     };
     editIndex.value = -1;
     showModal.value = true;
@@ -323,12 +319,12 @@ function openCreateForm(){
 
 // 保存记录
 async function saveRecord(saveData: Array<Record>) {
-    return await invoke("save_record", { data: JSON.stringify(saveData) }).then((records) => {
+    return await invoke("save_record", { jsonStr: JSON.stringify(saveData) }).then((records) => {
         if (typeof records === 'string') {
             recordData.list = JSON.parse(records);
             return true;
         } else {
-            console.error('Data is not a string:', records);
+            console.error('数据格式错误:', records);
             // 处理错误情况
             return false;
         }
@@ -345,10 +341,10 @@ function openPort(index: number) {
     console.log('open port');
     btnLoading.value = true;
     const item = recordData.list[index];
-    invoke("open_port", { data: JSON.stringify(item) }).then((pid) => {
+    invoke("open_port", { jsonStr: JSON.stringify(item) }).then((pid) => {
         const id: number = pid as number;
         if (id > 0) {
-            recordData.list[index].status = id;
+            recordData.list[index].pid = id;
             saveRecord(recordData.list);
             message.success('开启成功');
         } else {
@@ -370,9 +366,9 @@ function openPort(index: number) {
 // 关闭端口
 function closePort(index: number) {
     btnLoading.value = true;
-    invoke("close_port", { pid: recordData.list[index].status }).then((status) => {
-        if (status) {
-            recordData.list[index].status = 0;
+    invoke("close_port", { pid: recordData.list[index].pid }).then((pid) => {
+        if (pid) {
+            recordData.list[index].pid = 0;
             saveRecord(recordData.list);
             message.success('关闭成功');
         } else {
@@ -491,30 +487,34 @@ const handleValidateButtonClick = (e: MouseEvent) => {
         <n-button class="add-btn" type="info" size="medium" @click="openCreateForm">
             <template #icon>
                 <n-icon>
-                    <MdAddCircle/>
+                    <MdAddCircle />
                 </n-icon>
             </template>
         </n-button>
     </div>
 
     <!-- 添加记录 -->
-    <n-modal v-model:show="showModal" class="custom-card" preset="card" :style="bodyStyle" :title="editIndex > -1 ? '编辑记录' : '添加记录'" size="small"
-        :bordered="false" :segmented="segmented" :mask-closable="false"
-        footer-style="display: flex;flex-direction: row-reverse;">
+    <n-modal v-model:show="showModal" class="custom-card" preset="card" :style="bodyStyle"
+        :title="editIndex > -1 ? '编辑记录' : '添加记录'" size="small" :bordered="false" :segmented="segmented"
+        :mask-closable="false" footer-style="display: flex;flex-direction: row-reverse;">
         <template #header-extra>
         </template>
         <n-form ref="formRef" :model="recordData.item" :rules="rules">
             <n-form-item path="local_host" label="本地地址">
-                <n-input v-model:value="recordData.item.local_host" :disabled="true" placeholder="输入本地IP" @keydown.enter.prevent />
+                <n-input v-model:value="recordData.item.local_host" :disabled="true" placeholder="输入本地IP"
+                    @keydown.enter.prevent />
             </n-form-item>
             <n-form-item path="local_port" label="本地端口">
-                <n-input-number v-model:value="recordData.item.local_port" placeholder="输入本地端口" @keydown.enter.prevent />
+                <n-input-number v-model:value="recordData.item.local_port" placeholder="输入本地端口"
+                    @keydown.enter.prevent />
             </n-form-item>
             <n-form-item path="remote_host" label="远程地址（IP、域名）">
-                <n-input v-model:value="recordData.item.remote_host" placeholder="输入远程地址（IP或域名）" @keydown.enter.prevent />
+                <n-input v-model:value="recordData.item.remote_host" placeholder="输入远程地址（IP或域名）"
+                    @keydown.enter.prevent />
             </n-form-item>
             <n-form-item path="remote_port" label="远程端口">
-                <n-input-number v-model:value="recordData.item.remote_port" placeholder="输入远程端口" @keydown.enter.prevent />
+                <n-input-number v-model:value="recordData.item.remote_port" placeholder="输入远程端口"
+                    @keydown.enter.prevent />
             </n-form-item>
             <n-form-item label="转发协议" path="protocol">
                 <n-checkbox-group v-model:value="recordData.item.protocol">
