@@ -1,5 +1,7 @@
+pub mod file_helper;
 pub mod record;
 
+use file_helper::FileHelper;
 use record::Record;
 use serde_json::{from_str, to_string, to_writer_pretty};
 use std::fs::{File, OpenOptions};
@@ -14,9 +16,11 @@ use std::time::Duration;
 pub fn get_records() -> Result<String, String> {
     sleep(Duration::from_millis(200));
     // 获取文件内容
-    let contents = get_file_contents().map_err(|err| err.to_string())?;
-    println!("获取配置列表");
-    Ok(contents)
+    let contents = FileHelper::new().read_file_or_create();
+    match contents {
+        Ok(contents) => return Ok(contents),
+        Err(err) => return Err(err.to_string()),
+    }
 }
 
 // 保存配置
