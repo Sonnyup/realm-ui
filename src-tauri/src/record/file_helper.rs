@@ -8,14 +8,21 @@ pub struct FileHelper {
 }
 
 impl FileHelper {
+    // 创建FileHelper实例
     pub fn new() -> Self {
         Self {
             file_path: String::from("records.json"),
         }
     }
 
+    // 设置文件路径
     pub fn set_file_path(&mut self, file_path: String) {
         self.file_path = file_path;
+    }
+
+    // 打开文件并返回文件句柄
+    pub fn open_file(&self) -> Result<File, std::io::Error> {
+        File::open(&self.file_path)
     }
 
     // 读取文件内容，如果文件不存在则创建文件并返回[]字符串
@@ -49,6 +56,7 @@ impl FileHelper {
         Ok(())
     }
 
+    // 读取文件内容
     pub fn read_file(&self) -> Result<String, std::io::Error> {
         let mut file = File::open(&self.file_path)?;
         let mut contents = String::new();

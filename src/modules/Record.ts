@@ -6,7 +6,7 @@ type Record = {
     remote_host: string,
     remote_port: number,
     protocol: string[],
-    status: number
+    pid: number
 }
 
 export type { Record };
